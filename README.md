@@ -8,7 +8,7 @@ It will let authorized users create, rotate, and revoke VPN device configuration
 - One-time WireGuard configuration download when a device is created or rotated
 - PostgreSQL storage for device ownership, public keys, and assigned VPN addresses
 - AuthService JWT integration for user ownership and access control
-- Local administrator-token mode when AuthService is not included in a stack
+- Standalone operation when AuthService is not included in a stack
 - Ready-to-run Docker and Docker Compose environment
 - Postman collection for testing and exploration
   <br><br><br>
@@ -29,10 +29,10 @@ When integrated with AuthService, VPN access will be restricted by authorization
 - `VPN_API_ACCESS` — granted by default to `DEVELOPER`, `ADMIN`, and `SUPER` users
 - `VPN_MANAGEMENT` — granted by default to `SUPER` users for cross-user device management
 
-Normal `USER` accounts will not receive VPN access by default. When AuthService is not included, VPNService will require a local administrator token instead.
+Normal `USER` accounts will not receive VPN access by default. When AuthService is not included, VPNService follows the existing MSINIT standalone pattern and does not apply API authorization.
 <br><br><br>
 
-## Planned API
+## API
 - Create a VPN device and receive a one-time WireGuard configuration
 - List the current user's VPN devices
 - Revoke a VPN device
@@ -61,8 +61,16 @@ docker compose up --build
 The future `.env` file will provide database credentials, encryption secrets, WireGuard connection settings, and integration flags. Do not use example credentials outside local development.
 <br><br>
 
+## API Documentation
+A Postman collection is included in the root of the project:
+
+- `VpnService.postman_collection.json`
+
+It includes local administrator mode and AuthService integration requests.
+<br><br>
+
 ## Testing
-Unit tests and TestService end-to-end coverage will be added with the service implementation.
+Unit tests cover VPN device provisioning and revocation. TestService end-to-end coverage will be added with the service implementation.
 <br><br>
 
 ## License

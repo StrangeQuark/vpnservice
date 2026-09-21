@@ -1,0 +1,117 @@
+services:
+  vpn-service:
+    build: .
+    networks:
+      - shared-network
+      - vpndb-network
+      - vpn-wireguard-network
+    ports:
+      - "6040:6040"
+    container_name: vpn-service
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    labels:
+      com.msinit.log: "true"
+      com.msinit.service-name: "vpnservice"
+    depends_on:
+      - vpn-db
+      - wireguard
+    env_file:
+      - .env
+
+  vpn-db:
+    image: postgres:13.1-alpine
+    container_name: vpn-db
+    restart: unless-stopped
+    volumes:
+      - vpn-db-volume:/var/lib/postgresql/data
+    networks:
+      - vpndb-network
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+
+  wireguard:
+    image: ${WIREGUARD_IMAGE}
+    container_name: wireguard
+    restart: unless-stopped
+    networks:
+      - vpn-wireguard-network
+      - shared-network
+    ports:
+      - "51820:51820/udp"
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - SERVERURL=${VPN_HOST}
+      - SERVERPORT=${VPN_PORT}
+      - PEERS=0
+      - INTERNAL_SUBNET=${VPN_ADDRESS_PREFIX}.0
+      - VPN_ADDRESS_PREFIX=${VPN_ADDRESS_PREFIX}
+      - VPN_ROUTER_HOSTNAME=${VPN_ROUTER_HOSTNAME}
+    volumes:
+      - wireguard-config-volume:/config
+      - ./wireguard/custom-cont-init.d:/custom-cont-init.d:ro
+
+  wireguard-control:
+    build: ./wireguard-control
+    network_mode: service:wireguard
+    container_name: wireguard-control
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - WIREGUARD_CONTROL_TOKEN=${WIREGUARD_CONTROL_TOKEN}
+
+  vpn-router:
+    build: ./vpn-router
+    network_mode: service:wireguard
+    container_name: vpn-router
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    depends_on:
+      - wireguard
+    env_file:
+      - .env
+
+networks:
+  vpndb-network:
+    internal: true
+  vpn-wireguard-network:
+    internal: true
+  shared-network:
+    external: true
+
+volumes:
+  vpn-db-volume:
+  wireguard-config-volume:

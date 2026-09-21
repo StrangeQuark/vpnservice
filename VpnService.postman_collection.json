@@ -1,0 +1,173 @@
+{
+  "info": {
+    "_postman_id": "2e9f3234-daa5-4de2-8f23-1bb5b7ec8adb",
+    "name": "VPNService",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "VPN_BASE_URL",
+      "value": "http://localhost:6040"
+    },
+    {
+      "key": "ACCESS_TOKEN",
+      "value": ""
+    },
+    {
+      "key": "DEVICE_ID",
+      "value": ""
+    },
+    {
+      "key": "USER_ID",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Healthcheck",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [],
+        "url": "{{VPN_BASE_URL}}/api/vpn/health"
+      },
+      "response": []
+    },
+    {
+      "name": "Standalone mode",
+      "item": [
+        {
+          "name": "Create device",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if(pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('DEVICE_ID', response.id);",
+                  "    pm.visualizer.set(`<div style=\"font-family: Arial; max-width: 420px;\"><h2>WireGuard device created</h2><p><strong>Device:</strong> {{deviceName}}</p><p><strong>VPN address:</strong> {{vpnAddress}}</p><img src=\"{{qrCode}}\" alt=\"WireGuard configuration QR code\" style=\"width: 350px; height: 350px; image-rendering: pixelated;\" /><p>Scan this QR code once in the WireGuard mobile app.</p></div>`, response);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"deviceName\": \"local-laptop\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{VPN_BASE_URL}}/api/vpn/create-device"
+          },
+          "response": []
+        },
+        {
+          "name": "Get devices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{VPN_BASE_URL}}/api/vpn/get-devices"
+          },
+          "response": []
+        },
+        {
+          "name": "Rotate device",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if(pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('DEVICE_ID', response.id);",
+                  "    pm.visualizer.set(`<div style=\"font-family: Arial; max-width: 420px;\"><h2>WireGuard device rotated</h2><p><strong>Device:</strong> {{deviceName}}</p><p><strong>VPN address:</strong> {{vpnAddress}}</p><img src=\"{{qrCode}}\" alt=\"WireGuard configuration QR code\" style=\"width: 350px; height: 350px; image-rendering: pixelated;\" /><p>Scan this replacement QR code in the WireGuard mobile app.</p></div>`, response);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"deviceId\": \"{{DEVICE_ID}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{VPN_BASE_URL}}/api/vpn/rotate-device"
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke device",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"deviceId\": \"{{DEVICE_ID}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{VPN_BASE_URL}}/api/vpn/revoke-device"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "AuthService integration",
+      "item": [
+        {
+          "name": "Create device",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if(pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('DEVICE_ID', response.id);",
+                  "    pm.visualizer.set(`<div style=\"font-family: Arial; max-width: 420px;\"><h2>WireGuard device created</h2><p><strong>Device:</strong> {{deviceName}}</p><p><strong>VPN address:</strong> {{vpnAddress}}</p><img src=\"{{qrCode}}\" alt=\"WireGuard configuration QR code\" style=\"width: 350px; height: 350px; image-rendering: pixelated;\" /><p>Scan this QR code once in the WireGuard mobile app.</p></div>`, response);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ACCESS_TOKEN}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"deviceName\": \"work-laptop\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{VPN_BASE_URL}}/api/vpn/create-device"
+          },
+          "response": []
+        },
+        {
+          "name": "Get my devices",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ACCESS_TOKEN}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{VPN_BASE_URL}}/api/vpn/get-devices"
+          },
+          "response": []
+        },
+        {
+          "name": "Get all devices (VPN management)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ACCESS_TOKEN}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{VPN_BASE_URL}}/api/vpn/get-all-devices"
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke user devices (VPN management)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ACCESS_TOKEN}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"userId\": \"{{USER_ID}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{VPN_BASE_URL}}/api/vpn/revoke-user-devices"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
