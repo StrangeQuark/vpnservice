@@ -90,4 +90,31 @@ public class VpnServiceTest {
         verify(wireGuardControlUtility).removePeer("public-key", "10.8.0.2");
         verify(vpnDeviceRepository).delete(vpnDevice);
     }
+
+    @Test
+    public void revokeAdminDeviceRemovesWireGuardPeerAndDevice() {
+        UUID userId = UUID.randomUUID();
+        UUID deviceId = UUID.randomUUID();
+        VpnDevice vpnDevice = new VpnDevice(userId, "laptop", "public-key", "10.8.0.2");
+        vpnDevice.setId(deviceId);
+        VpnDeviceRequest request = new VpnDeviceRequest();
+        request.setDeviceId(deviceId);
+        when(vpnDeviceRepository.findById(deviceId)).thenReturn(java.util.Optional.of(vpnDevice));
+
+        ResponseEntity<?> response = vpnService.revokeAdminDevice(request);
+
+        assertEquals(200, response.getStatusCode().value());
+        verify(wireGuardControlUtility).removePeer("public-key", "10.8.0.2");
+        verify(vpnDeviceRepository).delete(vpnDevice);
+    }
+
+    @Test
+    public void deviceResponseIncludesUserId() {
+        UUID userId = UUID.randomUUID();
+        VpnDevice vpnDevice = new VpnDevice(userId, "laptop", "public-key", "10.8.0.2");
+
+        VpnDeviceResponse response = new VpnDeviceResponse(vpnDevice);
+
+        assertEquals(userId, response.getUserId());
+    }
 }

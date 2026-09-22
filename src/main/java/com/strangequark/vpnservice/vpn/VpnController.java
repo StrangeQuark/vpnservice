@@ -19,6 +19,8 @@ public class VpnController {
     public ResponseEntity<?> getDevices() { return vpnService.getDevices(); }
     @DeleteMapping("/revoke-device")
     public ResponseEntity<?> revokeDevice(@RequestBody VpnDeviceRequest vpnDeviceRequest) { return vpnService.revokeDevice(vpnDeviceRequest); }
+    @DeleteMapping("/admin/revoke-device")
+    public ResponseEntity<?> revokeAdminDevice(@RequestBody VpnDeviceRequest vpnDeviceRequest) { return vpnService.revokeAdminDevice(vpnDeviceRequest); }
     @PostMapping("/rotate-device")
     public ResponseEntity<?> rotateDevice(@RequestBody VpnDeviceRequest vpnDeviceRequest) { return vpnService.rotateDevice(vpnDeviceRequest); }
     @GetMapping("/get-all-devices")

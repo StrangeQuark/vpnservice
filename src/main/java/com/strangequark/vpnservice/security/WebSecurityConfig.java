@@ -35,7 +35,8 @@ public class WebSecurityConfig {
                     .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/api/vpn/health").permitAll()
-                    .requestMatchers("/api/vpn/get-all-devices", "/api/vpn/revoke-user-devices").hasAuthority("VPN_MANAGEMENT")
+                    .requestMatchers("/api/vpn/get-all-devices", "/api/vpn/admin/revoke-device", "/api/vpn/revoke-user-devices")
+                    .hasAuthority("VPN_MANAGEMENT")
                     .requestMatchers("/api/vpn/**").hasAuthority("VPN_API_ACCESS")
                     .anyRequest().permitAll());
             httpSecurity.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

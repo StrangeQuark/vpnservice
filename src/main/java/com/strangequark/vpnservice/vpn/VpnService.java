@@ -67,8 +67,18 @@ public class VpnService {
         try {
             VpnDevice vpnDevice = getVpnDevice(vpnDeviceRequest.getDeviceId());
             validateDeviceAccess(vpnDevice);
-            wireGuardControlUtility.removePeer(vpnDevice.getPublicKey(), vpnDevice.getVpnAddress());
-            vpnDeviceRepository.delete(vpnDevice);
+            removeVpnDevice(vpnDevice);
+            return ResponseEntity.ok("VPN device revoked");
+        } catch(RestClientException ex) {
+            return ResponseEntity.status(502).body("WireGuard control service is unavailable");
+        } catch(Exception ex) {
+            return ResponseEntity.status(400).body(ex.getMessage());
+        }
+    }
+
+    public ResponseEntity<?> revokeAdminDevice(VpnDeviceRequest vpnDeviceRequest) {
+        try {
+            removeVpnDevice(getVpnDevice(vpnDeviceRequest.getDeviceId()));
             return ResponseEntity.ok("VPN device revoked");
         } catch(RestClientException ex) {
             return ResponseEntity.status(502).body("WireGuard control service is unavailable");
@@ -103,10 +113,8 @@ public class VpnService {
         try {
             if(vpnDeviceRequest.getUserId() == null)
                 throw new RuntimeException("User ID is required");
-            for(VpnDevice vpnDevice : vpnDeviceRepository.findAllByUserId(vpnDeviceRequest.getUserId())) {
-                wireGuardControlUtility.removePeer(vpnDevice.getPublicKey(), vpnDevice.getVpnAddress());
-                vpnDeviceRepository.delete(vpnDevice);
-            }
+            for(VpnDevice vpnDevice : vpnDeviceRepository.findAllByUserId(vpnDeviceRequest.getUserId()))
+                removeVpnDevice(vpnDevice);
             return ResponseEntity.ok("User VPN devices revoked");
         } catch(RestClientException ex) {
             return ResponseEntity.status(502).body("WireGuard control service is unavailable");
@@ -130,6 +138,11 @@ public class VpnService {
     private void validateDeviceAccess(VpnDevice vpnDevice) {
         if(authserviceIntegration && !vpnDevice.getUserId().equals(getRequestingUserId()))
             throw new RuntimeException("VPN device does not belong to requesting user");
+    }
+
+    private void removeVpnDevice(VpnDevice vpnDevice) {
+        wireGuardControlUtility.removePeer(vpnDevice.getPublicKey(), vpnDevice.getVpnAddress());
+        vpnDeviceRepository.delete(vpnDevice);
     }
 
     private String getAvailableVpnAddress() {
