@@ -166,6 +166,17 @@
             "url": "{{VPN_BASE_URL}}/api/vpn/revoke-user-devices"
           },
           "response": []
+        },
+        {
+          "name": "Revoke device (VPN management)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ACCESS_TOKEN}}", "type": "string" }] },
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"deviceId\": \"{{DEVICE_ID}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{VPN_BASE_URL}}/api/vpn/admin/revoke-device"
+          },
+          "response": []
         }
       ]
     }

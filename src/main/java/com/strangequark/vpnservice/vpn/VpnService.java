@@ -19,12 +19,10 @@ public class VpnService {
     private boolean authserviceIntegration;
     @Value("${vpn.endpoint}")
     private String vpnEndpoint;
-    @Value("${vpn.client.dns}")
-    private String vpnClientDns;
     @Value("${vpn.client.allowed-ips}")
     private String vpnClientAllowedIps;
-    @Value("${vpn.address.prefix}")
-    private String vpnAddressPrefix;
+    @Value("${vpn.network.prefix}")
+    private String vpnNetworkPrefix;
 
     private final VpnDeviceRepository vpnDeviceRepository;
     @Autowired
@@ -67,8 +65,18 @@ public class VpnService {
         try {
             VpnDevice vpnDevice = getVpnDevice(vpnDeviceRequest.getDeviceId());
             validateDeviceAccess(vpnDevice);
-            wireGuardControlUtility.removePeer(vpnDevice.getPublicKey(), vpnDevice.getVpnAddress());
-            vpnDeviceRepository.delete(vpnDevice);
+            removeVpnDevice(vpnDevice);
+            return ResponseEntity.ok("VPN device revoked");
+        } catch(RestClientException ex) {
+            return ResponseEntity.status(502).body("WireGuard control service is unavailable");
+        } catch(Exception ex) {
+            return ResponseEntity.status(400).body(ex.getMessage());
+        }
+    }
+
+    public ResponseEntity<?> revokeAdminDevice(VpnDeviceRequest vpnDeviceRequest) {
+        try {
+            removeVpnDevice(getVpnDevice(vpnDeviceRequest.getDeviceId()));
             return ResponseEntity.ok("VPN device revoked");
         } catch(RestClientException ex) {
             return ResponseEntity.status(502).body("WireGuard control service is unavailable");
@@ -103,10 +111,8 @@ public class VpnService {
         try {
             if(vpnDeviceRequest.getUserId() == null)
                 throw new RuntimeException("User ID is required");
-            for(VpnDevice vpnDevice : vpnDeviceRepository.findAllByUserId(vpnDeviceRequest.getUserId())) {
-                wireGuardControlUtility.removePeer(vpnDevice.getPublicKey(), vpnDevice.getVpnAddress());
-                vpnDeviceRepository.delete(vpnDevice);
-            }
+            for(VpnDevice vpnDevice : vpnDeviceRepository.findAllByUserId(vpnDeviceRequest.getUserId()))
+                removeVpnDevice(vpnDevice);
             return ResponseEntity.ok("User VPN devices revoked");
         } catch(RestClientException ex) {
             return ResponseEntity.status(502).body("WireGuard control service is unavailable");
@@ -132,12 +138,17 @@ public class VpnService {
             throw new RuntimeException("VPN device does not belong to requesting user");
     }
 
+    private void removeVpnDevice(VpnDevice vpnDevice) {
+        wireGuardControlUtility.removePeer(vpnDevice.getPublicKey(), vpnDevice.getVpnAddress());
+        vpnDeviceRepository.delete(vpnDevice);
+    }
+
     private String getAvailableVpnAddress() {
         Set<String> usedAddresses = new HashSet<>();
         for(VpnDevice vpnDevice : vpnDeviceRepository.findAll())
             usedAddresses.add(vpnDevice.getVpnAddress());
         for(int i = 2; i < 255; i++) {
-            String vpnAddress = vpnAddressPrefix + "." + i;
+            String vpnAddress = vpnNetworkPrefix + "." + i;
             if(!usedAddresses.contains(vpnAddress))
                 return vpnAddress;
         }
@@ -155,11 +166,17 @@ public class VpnService {
         return "[Interface]\n" +
                 "PrivateKey = " + wireGuardPeer.getPrivateKey() + "\n" +
                 "Address = " + vpnAddress + "/32\n" +
-                "DNS = " + vpnClientDns + "\n\n" +
+                "DNS = " + vpnNetworkPrefix + ".1\n\n" +
                 "[Peer]\n" +
                 "PublicKey = " + wireGuardPeer.getServerPublicKey() + "\n" +
                 "Endpoint = " + vpnEndpoint + "\n" +
-                "AllowedIPs = " + vpnClientAllowedIps + "\n" +
+                "AllowedIPs = " + getVpnClientAllowedIps() + "\n" +
                 "PersistentKeepalive = 25";
+    }
+
+    private String getVpnClientAllowedIps() {
+        if(vpnClientAllowedIps.isBlank())
+            return vpnNetworkPrefix + ".0/24";
+        return vpnClientAllowedIps;
     }
 }

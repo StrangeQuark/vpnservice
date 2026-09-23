@@ -2,8 +2,11 @@
 set -eu
 
 routerConfig=/tmp/nginx.conf
+dnsResolver=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf)
+routerBindAddress=${VPN_ROUTER_BIND_ADDRESS:-${VPN_NETWORK_PREFIX}.1}
+routerPort=${VPN_ROUTER_PORT:-80}
 
-until ip addr show wg0 | grep -q "${VPN_ADDRESS_PREFIX}.1"; do
+until ip addr show wg0 | grep -q "${VPN_NETWORK_PREFIX}.1"; do
     sleep 1
 done
 
@@ -13,7 +16,7 @@ cat > "$routerConfig" <<EOF
 pid /tmp/nginx.pid;
 events {}
 http {
-    resolver 127.0.0.11 ipv6=off valid=10s;
+    resolver ${dnsResolver} ipv6=off valid=10s;
     client_body_temp_path /tmp/client_temp;
     proxy_temp_path /tmp/proxy_temp;
     fastcgi_temp_path /tmp/fastcgi_temp;
@@ -21,7 +24,7 @@ http {
     scgi_temp_path /tmp/scgi_temp;
 
     server {
-        listen ${VPN_ADDRESS_PREFIX}.1:80;
+        listen ${routerBindAddress}:${routerPort};
         server_tokens off;
 EOF
 
@@ -49,7 +52,7 @@ else
     appendRoute "${FILESERVICE_INTEGRATION:-false}" "/api/file/" "${FILE_SERVICE_URL:-http://file-service:6010}"
     appendRoute "${VAULTSERVICE_INTEGRATION:-false}" "/api/vault/" "${VAULT_SERVICE_URL:-http://vault-service:6020}"
     appendRoute "${TELEMETRYSERVICE_INTEGRATION:-false}" "/api/telemetry/" "${TELEMETRY_SERVICE_URL:-http://telemetry-service:6050}"
-    appendRoute true "/api/vpn/" "http://vpn-service:6040"
+    appendRoute true "/api/vpn/" "${VPN_SERVICE_URL:-http://vpn-service:6040}"
     appendRoute "${REACTSERVICE_INTEGRATION:-false}" "/" "${REACT_SERVICE_URL:-http://react-service}"
 fi
 
