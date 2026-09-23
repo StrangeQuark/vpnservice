@@ -3,10 +3,10 @@ set -eu
 
 routerConfig=/tmp/nginx.conf
 dnsResolver=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf)
-routerBindAddress=${VPN_ROUTER_BIND_ADDRESS:-${VPN_ADDRESS_PREFIX}.1}
+routerBindAddress=${VPN_ROUTER_BIND_ADDRESS:-${VPN_NETWORK_PREFIX}.1}
 routerPort=${VPN_ROUTER_PORT:-80}
 
-until ip addr show wg0 | grep -q "${VPN_ADDRESS_PREFIX}.1"; do
+until ip addr show wg0 | grep -q "${VPN_NETWORK_PREFIX}.1"; do
     sleep 1
 done
 

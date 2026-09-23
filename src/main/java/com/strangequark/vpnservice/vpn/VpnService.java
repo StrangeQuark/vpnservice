@@ -19,12 +19,10 @@ public class VpnService {
     private boolean authserviceIntegration;
     @Value("${vpn.endpoint}")
     private String vpnEndpoint;
-    @Value("${vpn.client.dns}")
-    private String vpnClientDns;
     @Value("${vpn.client.allowed-ips}")
     private String vpnClientAllowedIps;
-    @Value("${vpn.address.prefix}")
-    private String vpnAddressPrefix;
+    @Value("${vpn.network.prefix}")
+    private String vpnNetworkPrefix;
 
     private final VpnDeviceRepository vpnDeviceRepository;
     @Autowired
@@ -150,7 +148,7 @@ public class VpnService {
         for(VpnDevice vpnDevice : vpnDeviceRepository.findAll())
             usedAddresses.add(vpnDevice.getVpnAddress());
         for(int i = 2; i < 255; i++) {
-            String vpnAddress = vpnAddressPrefix + "." + i;
+            String vpnAddress = vpnNetworkPrefix + "." + i;
             if(!usedAddresses.contains(vpnAddress))
                 return vpnAddress;
         }
@@ -168,11 +166,17 @@ public class VpnService {
         return "[Interface]\n" +
                 "PrivateKey = " + wireGuardPeer.getPrivateKey() + "\n" +
                 "Address = " + vpnAddress + "/32\n" +
-                "DNS = " + vpnClientDns + "\n\n" +
+                "DNS = " + vpnNetworkPrefix + ".1\n\n" +
                 "[Peer]\n" +
                 "PublicKey = " + wireGuardPeer.getServerPublicKey() + "\n" +
                 "Endpoint = " + vpnEndpoint + "\n" +
-                "AllowedIPs = " + vpnClientAllowedIps + "\n" +
+                "AllowedIPs = " + getVpnClientAllowedIps() + "\n" +
                 "PersistentKeepalive = 25";
+    }
+
+    private String getVpnClientAllowedIps() {
+        if(vpnClientAllowedIps.isBlank())
+            return vpnNetworkPrefix + ".0/24";
+        return vpnClientAllowedIps;
     }
 }

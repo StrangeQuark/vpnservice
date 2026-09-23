@@ -40,9 +40,8 @@ public class VpnServiceTest {
         ReflectionTestUtils.setField(vpnService, "qrCodeUtility", qrCodeUtility);
         ReflectionTestUtils.setField(vpnService, "authserviceIntegration", false);
         ReflectionTestUtils.setField(vpnService, "vpnEndpoint", "vpn.example.com:51820");
-        ReflectionTestUtils.setField(vpnService, "vpnClientDns", "1.1.1.1");
-        ReflectionTestUtils.setField(vpnService, "vpnClientAllowedIps", "10.8.0.0/24");
-        ReflectionTestUtils.setField(vpnService, "vpnAddressPrefix", "10.8.0");
+        ReflectionTestUtils.setField(vpnService, "vpnClientAllowedIps", "");
+        ReflectionTestUtils.setField(vpnService, "vpnNetworkPrefix", "10.8.0");
     }
 
     @Test
@@ -69,6 +68,8 @@ public class VpnServiceTest {
         assertNotNull(body);
         assertTrue(body.getConfiguration().contains("PrivateKey = private-key"));
         assertTrue(body.getConfiguration().contains("Address = 10.8.0.2/32"));
+        assertTrue(body.getConfiguration().contains("DNS = 10.8.0.1"));
+        assertTrue(body.getConfiguration().contains("AllowedIPs = 10.8.0.0/24"));
         assertTrue(body.getConfiguration().contains("[Interface]\nPrivateKey"));
         assertFalse(body.getConfiguration().contains("\\n"));
         assertEquals("data:image/png;base64,test-qr-code", body.getQrCode());
