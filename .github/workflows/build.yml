@@ -1,0 +1,95 @@
+name: VPNService Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, linux-agent]
+
+    env:
+      VAULT_URL: ${{ secrets.VAULT_URL }}
+      CICD_TOKEN: ${{ secrets.VPN_CICD_TOKEN }}
+      VAULTSERVICE_ENABLED: ${{ secrets.VAULTSERVICE_ENABLED }}
+      KUBERNETES_CICD_TOKEN: ${{ secrets.KUBERNETES_CICD_TOKEN }}
+      KUBERNETES_ENABLED: ${{ vars.KUBERNETES_ENABLED }}
+      SERVICE_IMAGE_REPOSITORY: ${{ vars.SERVICE_IMAGE_REPOSITORY }}
+      KUBERNETESERVICE_URL: ${{ vars.KUBERNETESERVICE_URL }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Retrieve Env Vars from Vault
+        run: |
+          if [ "$VAULTSERVICE_ENABLED" = "true" ]; then
+            echo "Requesting environment variables from Vault..."
+
+            response=$(curl -sS --fail-with-body \
+              -X POST \
+              -H "X-CICD-TOKEN: $CICD_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{"serviceName":"vpnservice","environmentName":"e3"}' \
+              "$VAULT_URL/api/vault/cicd") || {
+                echo "Unable to retrieve environment variables from Vault"
+                exit 1
+              }
+
+            if [ -z "$response" ]; then
+              echo "Vault returned an empty environment file"
+              exit 1
+            fi
+
+            printf '%s\n' "$response" > vpnservice.env
+
+            echo "Environment variables written to vpnservice.env"
+          fi
+
+      - name: Run tests
+        run: ./mvnw clean test
+
+      - name: Deploy & Health Check
+        run: |
+          set -e
+
+          if [ "$KUBERNETES_ENABLED" = "true" ]; then
+            [ -n "$SERVICE_IMAGE_REPOSITORY" ] && [ -n "$KUBERNETESERVICE_URL" ] || exit 1
+            SERVICE_IMAGE="$SERVICE_IMAGE_REPOSITORY:$GITHUB_SHA"
+            docker build -t "$SERVICE_IMAGE" .
+            docker push "$SERVICE_IMAGE"
+            curl --fail-with-body -X POST -H "X-CICD-TOKEN: $KUBERNETES_CICD_TOKEN" \
+              -F "serviceName=vpnservice" -F "image=$SERVICE_IMAGE" \
+              -F "environmentFile=@vpnservice.env" "$KUBERNETESERVICE_URL/api/kubernetes/deploy"
+            exit 0
+          fi
+
+          docker compose --env-file vpnservice.env up --build -d
+
+          max_retries=40
+          retry_interval=15
+          success=0
+
+          for i in $(seq 1 $max_retries); do
+            echo "Health check attempt $i..."
+
+            if response=$(curl -sS -f http://localhost:6040/api/vpn/health) && [ "$response" = "200 OK" ]; then
+              echo "VPNService is healthy"
+              success=1
+              break
+            else
+              echo "Health check failed, retrying in $retry_interval seconds..."
+              sleep $retry_interval
+            fi
+          done
+
+          if [ $success -ne 1 ]; then
+            echo "Health check ultimately failed. Tearing down containers."
+            docker compose down
+            exit 1
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f vpnservice.env
+          echo "Cleaned up vpnservice.env"
