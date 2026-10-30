@@ -55,7 +55,8 @@ public class WebSecurityConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**").allowedOrigins(allowedOrigins).allowedMethods("GET", "POST", "DELETE")
-                        .allowedHeaders("Authorization", "Content-Type").allowCredentials(true);
+                        .allowedHeaders("Authorization", "Content-Type", "traceparent", "tracestate")
+                        .exposedHeaders("X-Trace-ID").allowCredentials(true);
             }
         };
     }
