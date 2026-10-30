@@ -19,6 +19,8 @@ services:
     labels:
       com.msinit.log: "true"
       com.msinit.service-name: "vpnservice"
+    logging:
+      driver: json-file
     depends_on:
       - vpn-db
       - wireguard

@@ -1,5 +1,6 @@
 package com.strangequark.vpnservice;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,11 +16,13 @@ public class VpnserviceApplication {
     private int serviceHttpReadTimeout;
 
     @Bean
-    public RestTemplate restTemplate() {
+    public RestTemplate restTemplate(ObservationRegistry observationRegistry) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(serviceHttpConnectTimeout);
         requestFactory.setReadTimeout(serviceHttpReadTimeout);
-        return new RestTemplate(requestFactory);
+        RestTemplate restTemplate = new RestTemplate(requestFactory);
+        restTemplate.setObservationRegistry(observationRegistry);
+        return restTemplate;
     }
 
     public static void main(String[] args) {

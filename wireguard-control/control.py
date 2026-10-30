@@ -1,5 +1,7 @@
 import json
 import os
+import re
+import secrets
 import subprocess
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -41,6 +43,11 @@ def restore_peers():
 
 class WireGuardControlHandler(BaseHTTPRequestHandler):
     def do_POST(self):
+        parent = re.fullmatch(r"00-([0-9a-f]{32})-([0-9a-f]{16})-([0-9a-f]{2})",
+                              self.headers.get("traceparent", ""))
+        self.trace_id = (parent.group(1) if parent and int(parent.group(1), 16)
+                         and int(parent.group(2), 16) else secrets.token_hex(16))
+        self.span_id = secrets.token_hex(8)
         if self.headers.get("X-WIREGUARD-CONTROL-TOKEN") != os.environ["WIREGUARD_CONTROL_TOKEN"]:
             self.send_response(401)
             self.end_headers()
@@ -81,8 +88,17 @@ class WireGuardControlHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(str(exception).encode())
 
+    def send_response(self, code, message=None):
+        if not getattr(self, "trace_id", None):
+            self.trace_id = secrets.token_hex(16)
+            self.span_id = secrets.token_hex(8)
+        super().send_response(code, message)
+        self.send_header("X-Trace-ID", self.trace_id)
+
     def log_message(self, format, *args):
-        return
+        print(json.dumps({"message": format % args, "level": "INFO",
+                          "traceId": getattr(self, "trace_id", ""),
+                          "spanId": getattr(self, "span_id", "")}), flush=True)
 
 
 def main():
